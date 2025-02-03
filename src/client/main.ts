@@ -1,4 +1,4 @@
-import { ParseCitations } from "@/logic/pdf-parser";
+import { ParseCitations, CitationInformation } from "@/logic/pdf-parser";
 
 const fileInput = document.getElementById("fileInput") as HTMLInputElement;
 const fileNameDisplay = document.getElementById(
