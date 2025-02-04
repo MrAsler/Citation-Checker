@@ -8,23 +8,23 @@ import "pdfjs-dist/build/pdf.worker.mjs";
 export class CitationInformation {
   originalText: string;
   authors: string;
-  paper: string;
+  title: string;
   conference: string;
 
   constructor(
     originalText: string,
     authors: string,
-    paper: string,
+    title: string,
     conference: string,
   ) {
     this.originalText = originalText;
     this.authors = authors;
-    this.paper = paper;
+    this.title = title;
     this.conference = conference;
   }
 
   public wasParsedSuccessfully() {
-    return this.authors != "" && this.paper != "" && this.conference != "";
+    return this.authors != "" && this.title != "" && this.conference != "";
   }
 }
 
@@ -42,7 +42,7 @@ class CitationParser {
   static formats = [
     new CitationFormat(
       "generic",
-      /^(?<authors>.*?[a-zA-Z]{2,}\.)\s*(?<paperName>.*?)\.\s*(?<conferenceName>[^,]+)/,
+      /^(?<authors>.*?[a-zA-Z]{2,}\.)\s*(?<title>.*?)\.\s*(?<conferenceName>[^,]+)/,
     ),
   ];
 
@@ -54,7 +54,7 @@ class CitationParser {
         return new CitationInformation(
           citationText,
           match.groups.authors,
-          match.groups.paperName,
+          match.groups.title,
           match.groups.conferenceName,
         );
       }
