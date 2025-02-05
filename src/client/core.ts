@@ -46,7 +46,7 @@ export async function processPdfFile(file: File) {
     addCitationToDom(citations[i], i + 1);
   }
 
-  for (let i = 5; i < citations.length; i++) {
+  for (let i = 0; i < citations.length; i++) {
     // Need to wait some time between requests
     await sleep(200);
     updateCitationBasedOnApiResult(citations[i], i + 1);
