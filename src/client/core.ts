@@ -8,11 +8,6 @@ import {
   createRedCross,
 } from "@/ui-elements";
 
-const fileInput = document.getElementById("fileInput") as HTMLInputElement;
-const fileNameDisplay = document.getElementById("fileName") as HTMLParagraphElement;
-const uploadZone = document.getElementById("uploadZone") as HTMLDivElement;
-const helpButton = document.getElementById("helpButton") as HTMLButtonElement;
-const closePopup = document.getElementById("closePopup") as HTMLButtonElement;
 const itemsSection = document.getElementById("itemsSection") as HTMLDivElement;
 
 const citationMap: Map<number, CitationEntry> = new Map<number, CitationEntry>();
@@ -34,7 +29,7 @@ enum CitationState {
   Success = "paper-found",
 }
 
-async function processPdfFile(file: File) {
+export async function processPdfFile(file: File) {
   setupCitationsPanel();
 
   // Then we parse the PDF file and obtain the list of references
@@ -178,6 +173,7 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
 
   var icon = null;
   var text = null;
+  var otherText = null;
 
   const response = await searchPaperByTitle(citation.title);
 
@@ -204,11 +200,16 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
       text.target = "_blank";
       text.rel = "noopener noreferrer";
       entry.state = CitationState.Success;
+
+      otherText = createDefaultText(`Cited by: ${data[0].citedBy}`);
     }
   }
 
   stateDiv.appendChild(icon!);
   stateDiv.appendChild(text);
+  if (otherText != null) {
+    stateDiv.appendChild(otherText);
+  }
 }
 
 function addCitationToDom(citation: CitationInformation, id: number) {
@@ -283,61 +284,3 @@ function addCitationToDom(citation: CitationInformation, id: number) {
 
   citationMap.set(id, citationEntry);
 }
-
-// Initialize sample items
-// Handle file selection
-fileInput.addEventListener("change", (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-
-  if (file) {
-    fileNameDisplay.textContent = `Selected: ${file.name}`;
-    processPdfFile(file);
-  }
-});
-
-// Handle upload zone click
-uploadZone.addEventListener("click", () => {
-  fileInput.click();
-});
-
-// Handle drag and drop
-uploadZone.addEventListener("dragover", (e: DragEvent) => {
-  e.preventDefault();
-  uploadZone.classList.remove("border-gray-300");
-  uploadZone.classList.add("border-gray-500");
-});
-
-uploadZone.addEventListener("dragleave", (e: DragEvent) => {
-  e.preventDefault();
-  uploadZone.classList.remove("border-gray-500");
-  uploadZone.classList.add("border-gray-300");
-});
-
-helpButton.addEventListener("click", async () => {
-  helpPopup.classList.remove("hidden");
-});
-
-closePopup.addEventListener("click", () => {
-  helpPopup.classList.add("hidden");
-});
-
-// Close the popup when clicking outside the popup content
-helpPopup.addEventListener("click", (event) => {
-  if (event.target === helpPopup) {
-    helpPopup.classList.add("hidden");
-  }
-});
-
-uploadZone.addEventListener("drop", (e: DragEvent) => {
-  e.preventDefault();
-  uploadZone.classList.remove("border-gray-500");
-  uploadZone.classList.add("border-gray-300");
-
-  const file = e.dataTransfer?.files[0];
-  if (file && file.type === "application/pdf") {
-    fileInput.files = e.dataTransfer?.files;
-    fileNameDisplay.textContent = `Selected: ${file.name}`;
-    processPdfFile(file);
-  }
-});
