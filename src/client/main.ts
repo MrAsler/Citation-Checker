@@ -1,22 +1,38 @@
 import { ParseCitations, CitationInformation } from "@/logic/pdf-parser";
 import { searchPaperByTitle } from "@/logic/api";
-import { OpenAlexResponse } from "src/types/types";
+import { CitationMetadata } from "src/types/types";
 import {
   createDarkGreyInterrogationPoint,
+  createDefaultText,
   createGreenCheckmark,
   createRedCross,
 } from "@/ui-elements";
 
 const fileInput = document.getElementById("fileInput") as HTMLInputElement;
-const fileNameDisplay = document.getElementById(
-  "fileName",
-) as HTMLParagraphElement;
+const fileNameDisplay = document.getElementById("fileName") as HTMLParagraphElement;
 const uploadZone = document.getElementById("uploadZone") as HTMLDivElement;
-const helpButton = document.getElementById("helpButton");
-const closePopup = document.getElementById("closePopup");
+const helpButton = document.getElementById("helpButton") as HTMLButtonElement;
+const closePopup = document.getElementById("closePopup") as HTMLButtonElement;
 const itemsSection = document.getElementById("itemsSection") as HTMLDivElement;
 
+const citationMap: Map<number, CitationEntry> = new Map<number, CitationEntry>();
+
 const activeFilters: Set<string> = new Set();
+
+type CitationEntry = {
+  id: number;
+  info: CitationInformation;
+  state: CitationState;
+  metadata: CitationMetadata | null;
+  li: HTMLLIElement;
+};
+
+enum CitationState {
+  Querying = "querying",
+  Error = "request-with-error",
+  NotFound = "paper-not-found",
+  Success = "paper-found",
+}
 
 async function processPdfFile(file: File) {
   setupCitationsPanel();
@@ -31,8 +47,6 @@ async function processPdfFile(file: File) {
     return;
   }
 
-  console.log("Return is..!");
-  console.log(citations);
   for (let i = 0; i < citations.length; i++) {
     addCitationToDom(citations[i], i + 1);
   }
@@ -43,7 +57,7 @@ async function processPdfFile(file: File) {
     updateCitationBasedOnApiResult(citations[i], i + 1);
   }
 
-  updateSummary();
+  updateSummaryDiv();
 
   // Afterwards, we check if each citation actually exists.
 }
@@ -52,97 +66,115 @@ function setupCitationsPanel() {
   // First we clean up the existing citations
   itemsSection.innerHTML = "";
   activeFilters.clear();
+  citationMap.clear();
 
   const summaryDiv = document.createElement("div");
-  summaryDiv.className = "h-10 shadow-md border-2 border border-gray-500";
+  summaryDiv.className = "h-20 shadow-md border-2 border border-gray-400 bg-gray-300";
   summaryDiv.id = "summaryDivId";
   const summaryDescription = document.createElement("span");
 
-  summaryDescription.className = "text-gray-700 text-center";
+  summaryDescription.className = "text-gray-700 w-40 text-center";
   summaryDescription.textContent = "Calculating summary...";
   summaryDiv.appendChild(summaryDescription);
 
   const itemsList = document.createElement("ul");
 
   itemsList.id = "itemsList";
-  itemsList.className =
-    "divide-y divide-gray-200 overflow-y-auto max-h-[calc(100vh-300px)]";
+  itemsList.className = "divide-y divide-gray-200 overflow-y-auto max-h-[calc(100vh-300px)]";
 
   itemsSection.appendChild(summaryDiv);
   itemsSection.appendChild(itemsList);
 }
 
-function updateSummary() {
-  const summaryDiv = document.getElementById("summaryDivId")!;
+function updateSummaryDiv() {
+  const papersFoundNumber = Array.from(
+    citationMap.values().filter((entry) => entry.state == CitationState.Success),
+  ).length;
+  const papersNotFound = citationMap.size - papersFoundNumber;
 
+  const reportDiv = document.createElement("div");
+  reportDiv.className = "w-50 h-full border-2 border-blue-500";
+
+  const reportPapersFound = createDefaultText(`Papers found: ${papersFoundNumber}`, ["block"]);
+  const reportPapersNotFound = createDefaultText(`Papers not found: ${papersNotFound}`, ["block"]);
+  reportDiv.appendChild(reportPapersFound);
+  reportDiv.appendChild(reportPapersNotFound);
+
+  const filtersDiv = document.createElement("div");
+  filtersDiv.className = "w-20 h-full";
+  createButtons().forEach((button) => filtersDiv.appendChild(button));
+
+  // const sortDiv = document.createElement("div");
+
+  const summaryDiv = document.getElementById("summaryDivId")!;
+  summaryDiv.classList.add("flex");
+  summaryDiv.innerHTML = "";
+
+  summaryDiv.appendChild(reportDiv);
+  summaryDiv.appendChild(filtersDiv);
+}
+
+function createButtons(): HTMLButtonElement[] {
   // Create buttons
   const buttonData = [
     {
-      label: "Unknown Papers",
-      className: "unknownPaper",
+      label: "Found",
       color: "bg-yellow-500",
+      filterValues: ["paper-found"],
     },
-    { label: "Found Papers", className: "foundPaper", color: "bg-green-500" },
     {
-      label: "Failed Requests",
-      className: "failedPaperRequest",
-      color: "bg-red-500",
+      label: "Not Found",
+      color: "bg-green-500",
+      filterValues: ["paper-not-found", "request-with-error"],
     },
   ];
 
-  buttonData.forEach(({ label, className, color }) => {
+  const buttons = buttonData.map(({ label, color, filterValues }) => {
     const button = document.createElement("button");
     button.textContent = label;
-    button.className = `px-4 py-2 m-2 text-white font-semibold rounded-lg shadow-md ${color} hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${color.split("-")[1]}-300`;
+    button.className = `px-2 py-0.5 m-1 text-nowrap text-white font-semibold rounded-lg shadow-md ${color} hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2`;
 
     // Add click event listener
     button.addEventListener("click", () => {
-      if (activeFilters.has(className)) {
-        activeFilters.delete(className); // Remove filter if already active
+      if (filterValues.some((v) => activeFilters.has(v))) {
+        filterValues.forEach((v) => activeFilters.delete(v)); // Remove filter if already active
         button.classList.remove("ring-2", "ring-offset-2", "ring-gray-300");
       } else {
-        activeFilters.add(className); // Add filter
+        filterValues.forEach((v) => activeFilters.add(v));
         button.classList.add("ring-2", "ring-offset-2", "ring-gray-300");
       }
       filterDivs();
     });
 
-    summaryDiv.appendChild(button);
+    return button;
   });
+
+  return buttons;
 }
 
-      // Function to filter divs
-      function filterDivs() {
-        const allDivs = document.querySelectorAll(".unknownPaper, .foundPaper, .failedPaperRequest");
-
-        if (activeFilters.size === 0) {
-          // Show all divs if no filters are active
-          allDivs.forEach((div) => {
-            (div as HTMLElement).style.display = "block";
-          });
-        } else {
-          // Show only divs that match active filters
-          allDivs.forEach((div) => {
-            const divElement = div as HTMLElement;
-            const matchesFilter = Array.from(activeFilters).some((filter) =>
-              divElement.classList.contains(filter)
-            );
-            divElement.style.display = matchesFilter ? "block" : "none";
-          });
-        }
+// Function to filter divs
+function filterDivs() {
+  if (activeFilters.size === 0) {
+    // Show all divs if no filters are active
+    citationMap.forEach((entry) => (entry.li.style.display = "block"));
+  } else {
+    // Show only divs that match active filters
+    citationMap.forEach((entry) => {
+      const matchesFilter = Array.from(activeFilters).some((filter) => entry.state == filter);
+      entry.li.style.display = matchesFilter ? "block" : "none";
+    });
+  }
+}
 
 // Sleep function to add a delay
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function updateCitationBasedOnApiResult(
-  citation: CitationInformation,
-  id: number,
-) {
-  const parentDiv = document.getElementById(`citation-${id}`)!;
+async function updateCitationBasedOnApiResult(citation: CitationInformation, id: number) {
   const stateDiv = document.getElementById(`citation-state-${id}`)!;
   stateDiv.innerHTML = "";
+  const entry = citationMap.get(id)!;
 
   var icon = null;
   var text = null;
@@ -153,22 +185,16 @@ async function updateCitationBasedOnApiResult(
     const errorData = await response.json();
 
     icon = createRedCross();
-    text = document.createElement("span");
-    text.className = "text-gray-700 text-left mb-3";
-
-    text.textContent = errorData.message || "Unknown error";
-    parentDiv.className += " failedPaperRequest";
+    text = createDefaultText(errorData.message || "Unknown error");
+    entry.state = CitationState.Error;
   } else {
-    const data: OpenAlexResponse[] = await response.json();
+    const data: CitationMetadata[] = await response.json();
 
     if (data.length == 0) {
       icon = createDarkGreyInterrogationPoint();
+      text = createDefaultText("Paper was not found");
 
-      text = document.createElement("span");
-      text.className = "text-gray-700 text-left mb-3";
-      text.textContent =
-        "Paper was not found. This might need manual searching.";
-      parentDiv.className += " unknownPaper";
+      entry.state = CitationState.NotFound;
     } else {
       icon = createGreenCheckmark();
 
@@ -177,9 +203,10 @@ async function updateCitationBasedOnApiResult(
       text.textContent = "Paper found!";
       text.target = "_blank";
       text.rel = "noopener noreferrer";
-      parentDiv.className += " foundPaper";
+      entry.state = CitationState.Success;
     }
   }
+
   stateDiv.appendChild(icon!);
   stateDiv.appendChild(text);
 }
@@ -245,6 +272,16 @@ function addCitationToDom(citation: CitationInformation, id: number) {
 
   const itemsList = document.getElementById("itemsList") as HTMLUListElement;
   itemsList.appendChild(li);
+
+  const citationEntry: CitationEntry = {
+    id: id,
+    info: citation,
+    state: CitationState.Querying,
+    metadata: null,
+    li: li,
+  };
+
+  citationMap.set(id, citationEntry);
 }
 
 // Initialize sample items

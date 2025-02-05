@@ -52,7 +52,13 @@ async function handleSearchRequest(title: string | null): Promise<Response> {
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    console.log(response);
+    const errorMessage = await response.json();
+    console.log(errorMessage);
+    return new Response(errorMessage, {
+      status: response.status,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const data = await response.json();

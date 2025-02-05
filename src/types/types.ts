@@ -1,4 +1,4 @@
-export type OpenAlexResponse = {
+export type CitationMetadata = {
   id: string;
-  displayName: string;
+  citedBy: number;
 };

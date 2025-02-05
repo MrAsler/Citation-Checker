@@ -1,4 +1,4 @@
-# pdf-checker
+# citation-checker
 
 To install dependencies:
 

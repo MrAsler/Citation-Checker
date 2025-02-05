@@ -1,7 +1,17 @@
+export function createDefaultText(text: string, additionalClasses?: string[]) {
+  const span = document.createElement("span");
+  span.className = "text-gray-700 text-left mb-3";
+  span.textContent = text;
+
+  if (additionalClasses != undefined) {
+    additionalClasses.forEach((c) => span.classList.add(c));
+  }
+  return span;
+}
+
 export function createRedCross() {
   const redCrossSpan = document.createElement("span");
-  redCrossSpan.className =
-    "inline-block w-4 h-4 flex items-center justify-center text-red-500";
+  redCrossSpan.className = "inline-block w-4 h-4 flex items-center justify-center text-red-500";
 
   // Create the SVG element
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -59,8 +69,7 @@ export function createGreenCheckmark() {
 
 export function createDarkGreyInterrogationPoint() {
   const span = document.createElement("span");
-  span.className =
-    "inline-block w-4 h-4 flex items-center justify-center text-gray-500";
+  span.className = "inline-block w-4 h-4 flex items-center justify-center text-gray-500";
 
   // Create the SVG element
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
