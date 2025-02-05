@@ -1,6 +1,9 @@
+const apiUrl = import.meta.env.VITE_API_URL;
+// /api/search
+
 export async function searchPaperByTitle(title: string): Promise<Response> {
   try {
-    const response = await fetch(`/api/search`, {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -12,8 +15,8 @@ export async function searchPaperByTitle(title: string): Promise<Response> {
 
     return response;
   } catch (error) {
-    console.error("Error searching paper:", error);
-    return new Response(JSON.stringify({ error: "Failed to search paper" }), {
+    console.log("Error searching paper:", error);
+    return new Response(JSON.stringify({ error: error.message || "Failed to search paper" }), {
       status: 500, // or any appropriate error status code
       headers: {
         "Content-Type": "application/json",
