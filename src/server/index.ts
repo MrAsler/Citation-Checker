@@ -53,7 +53,7 @@ async function handleSearchRequest(title: string | null): Promise<Response> {
   }
 
   const encodedTitle = encodeURIComponent(`"${title}"`);
-  const url = `${OPEN_ALEX_BASE_URL}/works?filter=title.search:${encodedTitle}&select=id,display_name`;
+  const url = `${OPEN_ALEX_BASE_URL}/works?filter=title.search:${encodedTitle}&select=id,cited_by_count`;
   const response = await fetch(url);
 
   if (!response.ok) {

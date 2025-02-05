@@ -1,4 +1,4 @@
 export type CitationMetadata = {
   id: string;
-  citedBy: number;
+  cited_by_count: number;
 };

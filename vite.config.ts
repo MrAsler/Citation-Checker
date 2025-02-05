@@ -4,7 +4,7 @@ import path from "path";
 
 export default defineConfig({
   build: { outDir: "../../public" },
-  base: "public", // Replace with your repository name
+  base: "citation-checker", // Replace with your repository name
   root: path.resolve(__dirname, "src/client"), // Specify the custom directory for index.html
   plugins: [tailwindcss()],
   resolve: {
