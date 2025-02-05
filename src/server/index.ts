@@ -1,11 +1,30 @@
 // server.ts
 import { serve } from "bun";
+import { join } from "path";
+import { file } from "bun";
+const distDir = join(import.meta.dir, "/../../public");
 
 const server = serve({
   port: 3000,
   async fetch(req) {
     try {
       const url = new URL(req.url);
+      console.log(url);
+      if (url.pathname === "/") {
+        return new Response(file(join(distDir, "index.html")), {
+          headers: { "Content-Type": "text/html" },
+        });
+      }
+      if (url.pathname.startsWith("/citation-checker/assets/")) {
+        const result = url.pathname.substring(url.pathname.indexOf("/assets"));
+        // Serve static files from the /dist directory
+        const filePath = join(distDir, result);
+        try {
+          return new Response(file(filePath));
+        } catch {
+          return new Response("404 Not Found", { status: 404 });
+        }
+      }
       if (url.pathname === "/api/search" && req.method === "POST") {
         const body = await req.json();
         const { title } = body;
@@ -14,7 +33,7 @@ const server = serve({
         return new Response("Hello!");
       } else {
         // Handle 404
-        return new Response("Not Found", { status: 404 });
+        return new Response("Not Found!", { status: 404 });
       }
     } catch (error) {
       console.log(error);
