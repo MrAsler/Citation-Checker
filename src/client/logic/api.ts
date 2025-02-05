@@ -1,8 +1,6 @@
-const baseUrl = "http://localhost:3000/api";
-
 export async function searchPaperByTitle(title: string): Promise<Response> {
   try {
-    const response = await fetch(`${baseUrl}/search`, {
+    const response = await fetch(`/api/search`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
