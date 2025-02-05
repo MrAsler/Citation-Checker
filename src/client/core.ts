@@ -182,10 +182,9 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
   if (!response.ok) {
     const errorData = await response.json();
 
-    console.log(errorData);
     icon = createRedCross();
     text = createDefaultText("Unknown error", ["text-justify", "justify-center"]);
-    //    text = createDefaultText(errorData.error || "Unknown error");
+    text = createDefaultText(errorData.error || "Unknown error");
     entry.state = CitationState.Error;
 
     stateDiv.appendChild(icon!);

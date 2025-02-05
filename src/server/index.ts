@@ -57,7 +57,6 @@ async function handleSearchRequest(title: string | null): Promise<Response> {
   const response = await fetch(url);
 
   if (!response.ok) {
-    console.log(response);
     const errorMessage = await response.json();
     console.log(errorMessage);
     return new Response(errorMessage, {

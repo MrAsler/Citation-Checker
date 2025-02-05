@@ -1,4 +1,4 @@
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl = "/api/search";
 // /api/search
 
 export async function searchPaperByTitle(title: string): Promise<Response> {
