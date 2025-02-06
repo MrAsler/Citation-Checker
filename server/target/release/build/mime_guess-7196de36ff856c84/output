@@ -1,0 +1,1 @@
+cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/home/asler/Developer/citation-checker/server/target/release/build/mime_guess-7196de36ff856c84/out/mime_types_generated.rs
