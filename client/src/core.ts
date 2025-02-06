@@ -1,6 +1,6 @@
 import { ParseCitations, CitationInformation } from "@/logic/pdf-parser";
 import { searchPaperByTitle } from "@/logic/api";
-import { CitationMetadata } from "src/types/types";
+import { CitationMetadata } from "@/types";
 import {
   createDarkGreyInterrogationPoint,
   createDefaultText,
@@ -170,7 +170,6 @@ function sleep(ms: number): Promise<void> {
 
 async function updateCitationBasedOnApiResult(citation: CitationInformation, id: number) {
   const stateDiv = document.getElementById(`citation-state-${id}`)!;
-  stateDiv.innerHTML = "";
   const entry = citationMap.get(id)!;
 
   var icon = null;
@@ -187,6 +186,7 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
     text = createDefaultText(errorData.error || "Unknown error");
     entry.state = CitationState.Error;
 
+    stateDiv.innerHTML = "";
     stateDiv.appendChild(icon!);
     stateDiv.appendChild(text);
   } else {
@@ -213,6 +213,7 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
       otherText = createDefaultText(`Cited by: ${data[0].cited_by_count}`, ["pl-2", "text-left"]);
     }
 
+    stateDiv.innerHTML = "";
     colDiv.appendChild(text);
     if (otherText) {
       colDiv.appendChild(otherText);

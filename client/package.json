@@ -7,8 +7,7 @@
     "dev": "bunx --bun vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "predeploy": "bun run build",
-    "deploy": "gh-pages -d dist"
+    "predeploy": "bun run build"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.3",
@@ -20,6 +19,5 @@
   },
   "dependencies": {
     "pdfjs-dist": "^4.10.38"
-  },
-  "module": "src/server/index.ts"
+  }
 }
