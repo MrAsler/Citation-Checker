@@ -2,10 +2,14 @@ import { ParseCitations, CitationInformation } from "@/logic/pdf-parser";
 import { searchPaperByTitle } from "@/logic/api";
 import { CitationMetadata } from "@/types";
 import {
+  createAuthorsIcon,
+  createCalendarIcon,
+  createConferenceIcon,
   createDarkGreyInterrogationPoint,
   createDefaultText,
   createGreenCheckmark,
   createRedCross,
+  createTitleIcon,
 } from "@/ui-elements";
 
 const itemsSection = document.getElementById("itemsSection") as HTMLDivElement;
@@ -48,8 +52,8 @@ export async function processPdfFile(file: File) {
 
   for (let i = 0; i < citations.length; i++) {
     // Need to wait some time between requests
-    await sleep(200);
-    updateCitationBasedOnApiResult(citations[i], i + 1);
+    await sleep(100);
+    await updateCitationBasedOnApiResult(citations[i], i + 1);
   }
 
   updateSummaryDiv();
@@ -204,8 +208,8 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
 
       text = document.createElement("a");
       text.href = data[0].id;
-      text.className = "pl-2 text-left";
-      text.textContent = "Link";
+      text.className = "pl-2 text-left text-xs";
+      text.textContent = data[0].display_name;
       text.target = "_blank";
       text.rel = "noopener noreferrer";
       entry.state = CitationState.Success;
@@ -225,9 +229,10 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
 }
 
 function addCitationToDom(citation: CitationInformation, id: number) {
+  console.log(citation);
   const li = document.createElement("li");
   li.className =
-    "p-4 hover:bg-gray-50 transition-colors flex items-center mt-1 mb-1 border-2 border-gray-300 rounded-lg shadow-md";
+    "p-4 bg-stone-200 transition-colors flex items-center mt-6 mb-6 border-2 border-gray-300 rounded-lg shadow-md";
   li.id = `citation-${id}`;
 
   // Create number badge
@@ -238,14 +243,36 @@ function addCitationToDom(citation: CitationInformation, id: number) {
 
   // Create text content
 
-  const authors = createDefaultText(citation.authors, ["mb-3"]);
-  const title = createDefaultText(citation.title, ["mb-3"]);
-  const conference = createDefaultText(citation.conference, ["mb-3"]);
+  const authors = createCardTextEntry(createDefaultText(citation.authors), createAuthorsIcon(), [
+    "border-b",
+    "border-gray-300",
+    "pb-4",
+  ]);
+  const title = createCardTextEntry(createDefaultText(citation.title), createTitleIcon(), [
+    "border-b",
+    "border-gray-300",
+    "pt-4",
+    "pb-4",
+  ]);
+  const conference = createCardTextEntry(
+    createDefaultText(citation.conference),
+    createConferenceIcon(),
+    ["border-b", "border-gray-300", "pt-4", "pb-4"],
+  );
+  let year = null;
+  if (citation.year != null) {
+    year = createCardTextEntry(createDefaultText(citation.year), createCalendarIcon(), [
+      "border-b",
+      "border-gray-300",
+      "pt-4",
+      "pb-4",
+    ]);
+  }
 
   // Initial state - Loading
   const stateDiv = document.createElement("div");
   stateDiv.className =
-    "flex h-14 p-2 pr-3 min-w-40 w-fit max-w-80 items-center space-x-2 border-2 border-gray-300 bg-gray-200 shadow-md";
+    "flex h-14 p-2 pr-3 min-w-40 w-fit max-w-80 items-center space-x-3 border-2 border-gray-300 bg-gray-200 shadow-md";
   stateDiv.id = `citation-state-${id}`;
 
   const stateWheel = document.createElement("span");
@@ -262,7 +289,7 @@ function addCitationToDom(citation: CitationInformation, id: number) {
   li.appendChild(badge);
 
   const originalText = document.createElement("span");
-  originalText.className = "text-gray-500 truncate mb-3 text-left";
+  originalText.className = "text-gray-500 truncate pt-4 mb-3 text-left";
   originalText.textContent = citation.originalText;
   originalText.title = citation.originalText;
 
@@ -271,7 +298,13 @@ function addCitationToDom(citation: CitationInformation, id: number) {
   paperInformation.appendChild(authors);
   paperInformation.appendChild(title);
   paperInformation.appendChild(conference);
+
+  if (year) {
+    paperInformation.appendChild(year);
+  }
+
   paperInformation.appendChild(originalText);
+
   paperInformation.appendChild(stateDiv);
 
   li.appendChild(paperInformation);
@@ -288,4 +321,24 @@ function addCitationToDom(citation: CitationInformation, id: number) {
   };
 
   citationMap.set(id, citationEntry);
+}
+
+function createCardTextEntry(
+  text: HTMLParagraphElement,
+  icon: HTMLSpanElement,
+  additionalClasses?: string[],
+): HTMLDivElement {
+  const div = document.createElement("div");
+  div.className = "flex items-center";
+
+  if (additionalClasses != undefined) {
+    additionalClasses.forEach((c) => div.classList.add(c));
+  }
+
+  icon.classList.add("mr-5");
+
+  div.appendChild(icon);
+  div.appendChild(text);
+
+  return div;
 }
