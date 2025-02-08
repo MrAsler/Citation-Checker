@@ -13,29 +13,6 @@ const conferenceIcon = parser.parseFromString(
 ).documentElement;
 const titleIcon = parser.parseFromString(titleIconSvgData, "image/svg+xml").documentElement;
 
-function removeStyleTags(svgElement: HTMLElement) {
-  // Select all <style> tags inside the SVG
-  const styleTags = svgElement.querySelectorAll("style");
-  console.log(svgElement);
-  console.log(styleTags);
-
-  // Remove each <style> tag
-  styleTags.forEach((styleTag) => {
-    console.log("Removing! " + styleTag);
-    styleTag.remove();
-  });
-}
-
-removeStyleTags(authorsIcon);
-removeStyleTags(calendarIcon);
-removeStyleTags(conferenceIcon);
-removeStyleTags(titleIcon);
-
-console.log(authorsIcon);
-console.log(calendarIcon);
-console.log(conferenceIcon);
-console.log(titleIcon);
-
 export function createDefaultText(
   text: string,
   additionalClasses?: string[],

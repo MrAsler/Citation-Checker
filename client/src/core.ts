@@ -229,7 +229,6 @@ async function updateCitationBasedOnApiResult(citation: CitationInformation, id:
 }
 
 function addCitationToDom(citation: CitationInformation, id: number) {
-  console.log(citation);
   const li = document.createElement("li");
   li.className =
     "p-4 bg-stone-200 transition-colors flex items-center mt-6 mb-6 border-2 border-gray-300 rounded-lg shadow-md";
