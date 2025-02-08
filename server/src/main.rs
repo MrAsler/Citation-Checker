@@ -23,6 +23,8 @@ struct ErrorResponse {
 #[derive(Deserialize, Serialize)]
 struct SearchResult {
     id: String,
+    display_name: String,
+    year: String,
     cited_by_count: i32,
 }
 
@@ -90,42 +92,76 @@ async fn handle_search(
     }
 
     // Prepare URL
-    let encoded_title = urlencoding::encode(title.as_str());
+    // 3 tries: first search by purey the display tite, then check if only the first name exists
+    //   and matches
+    // The openAlex API has issues with titles that have commas, so we remove them
+    let commaless_title = title.replace(",", "");
+    let quoted_title = format!("\"{}\"", commaless_title);
+    //    let encoded_title = urlencoding::encode(commaless_title.as_str());
+
+    //   let search_query = "/works?search=";
+    let search_query = "/works?filter=title.search:";
     let url = format!(
-        "{}/works?filter=title.search:{}&select=id,cited_by_count",
-        state.openalex_base_url, encoded_title
+        "{}{}{}&select=id,display_name,cited_by_count,publication_year",
+        state.openalex_base_url, search_query, quoted_title
     );
+    println!("{:?}", url);
 
     // Make request to OpenAlex
-    match state.client.get(&url).send().await {
-        Ok(response) => {
-            if response.status().is_success() {
-                match response.json::<OpenAlexResponse>().await {
-                    Ok(data) => Json(data.results).into_response(),
-                    Err(e) => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ErrorResponse {
-                            error: format!("Failed to parse response: {}", e),
-                        }),
-                    )
-                        .into_response(),
-                }
-            } else {
-                (
-                    StatusCode::from_u16(response.status().as_u16()).unwrap(),
-                    Json(ErrorResponse {
-                        error: "External API error".to_string(),
-                    }),
-                )
-                    .into_response()
-            }
+    let response = match state.client.get(&url).send().await {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: format!("Request failed: {}", e),
+                }),
+            )
+                .into_response()
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
+    };
+    if !response.status().is_success() {
+        let response_status = response.status().as_u16();
+        return (
+            StatusCode::from_u16(response_status).unwrap(),
             Json(ErrorResponse {
-                error: format!("Request failed: {}", e),
+                error: "External API error".to_string(),
             }),
         )
-            .into_response(),
+            .into_response();
     }
+
+    let query_result = match response.json::<OpenAlexResponse>().await {
+        Ok(data) => data.results,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: format!("Failed to parse response: {}", e),
+                }),
+            )
+                .into_response()
+        }
+    };
+
+    // OpenAlex has some works whose title is only the text until the paper title's colon.
+    // As such, if we didn't receive any results and the title has a colon,
+    // then get the text up to the colon and try the query again
+    if query_result.len() == 0 {
+        if let Some(index) = title.find(':') {
+            // Slice the string up to the colon
+            let text_before_colon = &title[..index];
+            return handle_search(
+                axum::extract::State(state),
+                axum::Json(SearchRequest {
+                    title: Some(text_before_colon.to_string()),
+                }),
+            )
+            .await;
+        }
+    }
+
+    Json(query_result).into_response()
 }
+
+fn inner_search()
