@@ -1,66 +1,31 @@
 import * as pdfjsLib from "pdfjs-dist";
-import type {
-  PDFDocumentProxy,
-  TextItem,
-} from "pdfjs-dist/types/src/display/api";
+import type { PDFDocumentProxy, TextItem } from "pdfjs-dist/types/src/display/api";
 import "pdfjs-dist/build/pdf.worker.mjs";
+import { CitationTokenizer } from "./tokenizer";
 
 export class CitationInformation {
   originalText: string;
   authors: string;
   title: string;
   conference: string;
+  year: string | null;
 
   constructor(
     originalText: string,
     authors: string,
     title: string,
     conference: string,
+    year: string | null,
   ) {
     this.originalText = originalText;
     this.authors = authors;
     this.title = title;
     this.conference = conference;
+    this.year = year;
   }
 
   public wasParsedSuccessfully() {
     return this.authors != "" && this.title != "" && this.conference != "";
-  }
-}
-
-class CitationFormat {
-  name: string;
-  regex: RegExp;
-
-  constructor(name: string, regex: RegExp) {
-    this.name = name;
-    this.regex = regex;
-  }
-}
-
-class CitationParser {
-  static formats = [
-    new CitationFormat(
-      "generic",
-      /^(?<authors>.*?[a-zA-Z]{2,}\.)\s*(?<title>.*?)\.\s*(?<conferenceName>[^,]+)/,
-    ),
-  ];
-
-  public static tryParseCitation(citationText: string): CitationInformation {
-    for (const format of CitationParser.formats) {
-      const match = citationText.match(format.regex);
-
-      if (match && match.groups) {
-        return new CitationInformation(
-          citationText,
-          match.groups.authors,
-          match.groups.title,
-          match.groups.conferenceName,
-        );
-      }
-    }
-
-    return new CitationInformation(citationText, "", "", "");
   }
 }
 
@@ -69,9 +34,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 
 type ErrorReason = string;
 
-export async function ParseCitations(
-  pdfFile: File,
-): Promise<CitationInformation[] | ErrorReason> {
+export async function ParseCitations(pdfFile: File): Promise<CitationInformation[] | ErrorReason> {
   try {
     const pdf = await loadPdfFile(pdfFile);
     const startOfCitations = await findStartOfCitations(pdf);
@@ -86,7 +49,10 @@ export async function ParseCitations(
       startOfCitations.line,
     );
 
-    return citationStrings.map((text) => CitationParser.tryParseCitation(text));
+    return citationStrings.map(
+      (text) =>
+        new CitationTokenizer(text).tokenize() || new CitationInformation(text, "", "", "", ""),
+    );
   } catch (error) {
     console.error("Error parsing PDF:", error);
     return "Error parsing the PDF: " + error;
@@ -150,8 +116,10 @@ async function buildCitationsText(
       // Found new citation, finish current one and add it to result list
       if (line.startsWith(`[${citationNumber}]`)) {
         citation = citation.replace("  ", " ").replace(/^\[\d+\]\s*/, "");
-        result.push(citation);
 
+        if (citation != "") {
+          result.push(citation);
+        }
         citation = line;
         citationNumber++;
         continue;
