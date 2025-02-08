@@ -81,14 +81,12 @@ export class CitationTokenizer {
 
     // If there is only one character and then a full stop, then it's the unknown format.
     if (text.length === 1) {
-      console.log("UNKNOWN");
       return this.consumeUntil(() => this.isEndOfAuthorsUnknownFormat());
     }
 
     // Vancouver style doesn't have a comma after the first name, so it is the easiest to identify.
     // It ends when we find the first full stop.
     if (text.includes(" ")) {
-      console.log("VANCOUVER");
       return this.consumeUntil((_, char) => char === ".");
     }
 
@@ -98,20 +96,16 @@ export class CitationTokenizer {
     text = this.peekUntil(
       (peekedText, char) => (peekedText.includes(",") && char === ",") || char === ".",
     );
-    console.log(text);
     if (text != "" && text.split(",")[1].length === 1) {
-      console.log("MLA or CHICAGO");
       return this.consumeUntil((_, char) => char === ".");
     }
 
-    console.log("APA or HARVARD");
     // APA and HARVARD are missing by this point
     // Both end with the year after the authors section, so we try to parse it
     return this.consumeUntil(() => this.isEndOfAuthorsByFindingYear());
   }
 
   private isEndOfAuthorsUnknownFormat(): boolean {
-    console.log("Check unknown");
     let pos = this.position;
 
     if (pos === 0) {
@@ -125,20 +119,11 @@ export class CitationTokenizer {
     const previousChar = this.input[pos - 1];
     const currentChar = this.input[pos];
 
-    const res = isLetter(twoPreviousChar) && isLetter(previousChar) && currentChar === ".";
-    if (res) {
-      console.log(res);
-      console.log(twoPreviousChar);
-      console.log(previousChar);
-      console.log(currentChar);
-    }
-    return res;
+    return isLetter(twoPreviousChar) && isLetter(previousChar) && currentChar === ".";
   }
 
   // If we find a number, then we assume that is year the year and return true.
   private isEndOfAuthorsByFindingYear(): boolean {
-    console.log("check year aut");
-
     let pos = this.position;
 
     const currentChar = this.input[pos];
@@ -195,7 +180,7 @@ export class CitationTokenizer {
   public tokenize(): CitationInformation | null {
     try {
       const authors = this.parseAuthors();
-      console.log(authors);
+
       this.consume(); // consume the dot
       // Tries to parse an year. If found, consumes it
       const year = this.tryParseYear();
@@ -220,7 +205,7 @@ export class CitationTokenizer {
         year,
       );
     } catch (error) {
-      console.log("BOOM!");
+      console.log("Unexpected error!");
       console.log(error);
       return null;
     }

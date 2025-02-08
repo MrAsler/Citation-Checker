@@ -10,8 +10,6 @@ export async function searchPaperByTitle(title: string): Promise<Response> {
       body: JSON.stringify({ title }),
     });
 
-    console.log(response);
-
     return response;
   } catch (error) {
     var errorMessage = "Failed to search paper";
