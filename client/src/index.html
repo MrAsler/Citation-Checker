@@ -10,11 +10,11 @@
     <!-- Header Section -->
     <div class="bg-white shadow-md pt-12 mb-5">
       <h1 class="text-2xl font-bold text-gray-800">Citation Checker</h1>
-      <p class="text-gray-600 mt-2">Upload a PDF to check more information about the citations.</p>
+      <p class="text-gray-600 mt-2">Upload a PDF to obtain information about the citations.</p>
     </div>
     <!-- Help Button -->
     <button
-      id="helpButton"
+      id="help-button"
       class="absolute top-12 right-15 bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition"
     >
       Help
@@ -23,7 +23,7 @@
     <div id="app" class="p-5 max-w-7xl mx-auto h-dvh w-[90rem] flex gap-5">
       <!-- Upload Section -->
       <div
-        id="uploadZone"
+        id="upload-zone"
         class="flex-initial bg-white shadow-md h-full border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-gray-500 transition-colors max-w-[50%] w-full p-5"
       >
         <svg class="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,28 +35,24 @@
           />
         </svg>
         <p class="mt-4 text-gray-500">1. Click or drag PDF file here</p>
-        <input type="file" accept=".pdf" id="fileInput" class="hidden" />
-        <p id="fileName" class="mt-2 text-sm text-gray-500"></p>
+        <input type="file" accept=".pdf" id="file-input" class="hidden" />
+        <p id="file-name" class="mt-2 text-sm text-gray-500"></p>
       </div>
 
       <!-- Items Section -->
       <div
         class="flex-initial bg-white border-gray-300 border rounded-lg shadow-md p-5 max-w-[50%] w-full"
-        id="itemsSection"
+        id="items-section"
       >
-        <p id="tutorial_pt_2" class="mt-4 text-gray-500 flex items-center justify-center h-full">
+        <p id="tutorial-text" class="mt-4 text-gray-500 flex items-center justify-center h-full">
           2. See citations here!
         </p>
-        <ul
-          id="itemsList"
-          class="divide-y divide-gray-200 overflow-y-auto max-h-[calc(100vh-400px)]"
-        ></ul>
       </div>
     </div>
 
     <!-- Popup Div -->
     <div
-      id="helpPopup"
+      id="help-popup"
       class="hidden fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50"
     >
       <div
@@ -68,7 +64,7 @@
           Add as much content as you need here.
         </p>
         <button
-          id="closePopup"
+          id="close-popup"
           class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition"
         >
           Close
