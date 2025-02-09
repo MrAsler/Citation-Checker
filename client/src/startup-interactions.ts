@@ -1,11 +1,11 @@
 import { processPdfFile } from "@/core";
 
-const fileInput = document.getElementById("fileInput") as HTMLInputElement;
-const fileNameDisplay = document.getElementById("fileName") as HTMLParagraphElement;
-const uploadZone = document.getElementById("uploadZone") as HTMLDivElement;
-const helpButton = document.getElementById("helpButton") as HTMLButtonElement;
-const closePopup = document.getElementById("closePopup") as HTMLButtonElement;
-const helpPopup = document.getElementById("helpPopup") as HTMLButtonElement;
+const fileInput = document.getElementById("file-input") as HTMLInputElement;
+const fileNameDisplay = document.getElementById("file-name") as HTMLParagraphElement;
+const uploadZone = document.getElementById("upload-zone") as HTMLDivElement;
+const helpButton = document.getElementById("help-button") as HTMLButtonElement;
+const closePopup = document.getElementById("close-popup") as HTMLButtonElement;
+const helpPopup = document.getElementById("help-popup") as HTMLButtonElement;
 
 // Initialize sample items
 // Handle file selection

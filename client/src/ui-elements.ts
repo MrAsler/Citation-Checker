@@ -17,14 +17,17 @@ export function createDefaultText(
   text: string,
   additionalClasses?: string[],
 ): HTMLParagraphElement {
-  const span = document.createElement("p");
-  span.className = "text-gray-700 text-left";
-  span.textContent = text;
+  const paragraph = document.createElement("p");
+  paragraph.innerHTML = `
+      <p class="text-gray-700 text-left">
+        ${text}
+      </p>
+  `;
 
   if (additionalClasses != undefined) {
-    additionalClasses.forEach((c) => span.classList.add(c));
+    additionalClasses.forEach((c) => paragraph.classList.add(c));
   }
-  return span;
+  return paragraph;
 }
 
 export function createRedCross(): HTMLSpanElement {
@@ -127,20 +130,20 @@ export function createDarkGreyInterrogationPoint(additionalClasses?: string[]): 
   return span;
 }
 
-export function createAuthorsIcon(): HTMLSpanElement {
-  return createFromSvgIcon(authorsIcon);
+export function createAuthorsIcon(additionalClasses?: string[]): HTMLSpanElement {
+  return createFromSvgIcon(authorsIcon, additionalClasses);
 }
 
-export function createTitleIcon() {
-  return createFromSvgIcon(titleIcon);
+export function createTitleIcon(additionalClasses?: string[]): HTMLSpanElement {
+  return createFromSvgIcon(titleIcon, additionalClasses);
 }
 
-export function createConferenceIcon() {
-  return createFromSvgIcon(conferenceIcon);
+export function createConferenceIcon(additionalClasses?: string[]): HTMLSpanElement {
+  return createFromSvgIcon(conferenceIcon, additionalClasses);
 }
 
-export function createCalendarIcon() {
-  return createFromSvgIcon(calendarIcon);
+export function createCalendarIcon(additionalClasses?: string[]): HTMLSpanElement {
+  return createFromSvgIcon(calendarIcon, additionalClasses);
 }
 
 function createFromSvgIcon(
