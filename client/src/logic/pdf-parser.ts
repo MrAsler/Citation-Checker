@@ -3,7 +3,7 @@ import type { PDFDocumentProxy, TextItem } from "pdfjs-dist/types/src/display/ap
 import "pdfjs-dist/build/pdf.worker.mjs";
 import { CitationTokenizer } from "./tokenizer";
 
-export class CitationInformation {
+export class ParsedCitation {
   originalText: string;
   authors: string;
   title: string;
@@ -34,7 +34,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 
 type ErrorReason = string;
 
-export async function ParseCitations(pdfFile: File): Promise<CitationInformation[] | ErrorReason> {
+export async function ParseCitations(pdfFile: File): Promise<ParsedCitation[] | ErrorReason> {
   try {
     const pdf = await loadPdfFile(pdfFile);
     const startOfCitations = await findStartOfCitations(pdf);
@@ -50,8 +50,7 @@ export async function ParseCitations(pdfFile: File): Promise<CitationInformation
     );
 
     return citationStrings.map(
-      (text) =>
-        new CitationTokenizer(text).tokenize() || new CitationInformation(text, "", "", "", ""),
+      (text) => new CitationTokenizer(text).tokenize() || new ParsedCitation(text, "", "", "", ""),
     );
   } catch (error) {
     console.error("Error parsing PDF:", error);

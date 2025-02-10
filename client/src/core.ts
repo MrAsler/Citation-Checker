@@ -1,21 +1,17 @@
-import { ParseCitations, CitationInformation } from "@/logic/pdf-parser";
+import { ParseCitations, ParsedCitation } from "@/logic/pdf-parser";
 import { CitationMetadata } from "@/types";
 import { CitationCardList } from "@/components/citation-card-list";
 import { SummaryPanel } from "@/components/summary-panel";
 
-const itemsSection = document.getElementById("items-section") as HTMLDivElement;
-
-const citationMap: Map<number, CitationEntry> = new Map<number, CitationEntry>();
-
+var allCitations: CitationEntry[] = [];
 var cardList: CitationCardList | null;
-const activeFilters: Set<string> = new Set();
+var panel: SummaryPanel | null;
 
 export type CitationEntry = {
   id: number;
-  info: CitationInformation;
+  info: ParsedCitation;
   state: CitationState;
   metadata: CitationMetadata | null;
-  li: HTMLLIElement;
 };
 
 export enum CitationState {
@@ -27,35 +23,56 @@ export enum CitationState {
 
 export async function processPdfFile(file: File) {
   document.getElementById("tutorial-text")?.remove();
-  const panel = new SummaryPanel("summary-div", "items-section");
-  const cardList = new CitationCardList("citation-list", "items-section");
+  panel = new SummaryPanel("summary-div", "items-section");
+  cardList = new CitationCardList("citation-list", "items-section");
 
   // Then we parse the PDF file and obtain the list of references
   // With these references, we then add the entries to the DOM
   // In this initial state, each entry will have the "unverified" state
-  const citations = await ParseCitations(file);
+  const parsedCitations = await ParseCitations(file);
 
-  if (typeof citations === "string") {
-    console.log(citations);
+  if (typeof parsedCitations === "string") {
+    console.log(parsedCitations);
     return;
   }
 
-  for (let i = 0; i < citations.length; i++) {
-    cardList.addCitation(citations[i], i + 1);
+  allCitations = buildCitationUIData(parsedCitations);
+  cardList.render(allCitations);
+
+  for (const citation of allCitations) {
+    await sleep(200);
+    await cardList.updateCitationBasedOnApiResult(citation);
   }
 
-  for (let i = 0; i < citations.length; i++) {
-    // Need to wait some time between requests
-    await sleep(100);
-    await cardList.updateCitationBasedOnApiResult(citations[i], i + 1);
+  panel.updateSummaryDiv(allCitations);
+}
+
+function buildCitationUIData(parsedCitations: ParsedCitation[]): CitationEntry[] {
+  let result: CitationEntry[] = [];
+
+  for (let i = 0; i < parsedCitations.length; i++) {
+    const entry: CitationEntry = {
+      id: i + 1,
+      info: parsedCitations[i],
+      state: CitationState.Querying,
+      metadata: null,
+    };
+    result.push(entry);
   }
 
-  panel.updateSummaryDiv(cardList);
-
-  // Afterwards, we check if each citation actually exists.
+  return result;
 }
 
 // Sleep function to add a delay
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// This function takes into considerion the applied filters and sort
+// and renders the correct citations
+export function renderCitations(): void {
+  const filteredCitations = panel!.filter!.applyFilter(allCitations);
+  const filteredSortedCitations = panel!.sort!.applySort(filteredCitations);
+
+  cardList!.render(filteredSortedCitations);
 }
