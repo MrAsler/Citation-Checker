@@ -1,6 +1,6 @@
 //
 
-import { CitationInformation } from "./pdf-parser";
+import { ParsedCitation } from "./pdf-parser";
 
 export class CitationTokenizer {
   private input: string;
@@ -177,7 +177,7 @@ export class CitationTokenizer {
   // This tokenizer checks for:
   // Authors, year, title, conference
   // Authors, title, conference
-  public tokenize(): CitationInformation | null {
+  public tokenize(): ParsedCitation | null {
     try {
       const authors = this.parseAuthors();
 
@@ -197,7 +197,7 @@ export class CitationTokenizer {
 
       // Parse conference name (ends with a comma or end of string)
       const conferenceName = this.consumeUntil((_, char) => char === ",");
-      return new CitationInformation(
+      return new ParsedCitation(
         this.input,
         authors.trim(),
         title.trim(),

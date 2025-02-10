@@ -1,10 +1,11 @@
-import { CitationCardList } from "@/components/citation-card-list";
-import { CitationState } from "@/core";
-import { DropdownSingleSelect } from "./dropdown-single-select";
-import { DropdownMultiSelect } from "./dropdown-multi-select";
+import { CitationEntry, CitationState } from "@/core";
+import { SortDropdownSingleSelect } from "@/components/sort-dropdown-single-select";
+import { FilterDropdownMultiSelect } from "@/components/filter-dropdown-multi-select";
 
 export class SummaryPanel {
   private panel: HTMLDivElement;
+  public filter: FilterDropdownMultiSelect | undefined;
+  public sort: SortDropdownSingleSelect | undefined;
 
   constructor(panelId: string, containerId: string) {
     var panel = document.getElementById(panelId);
@@ -12,7 +13,7 @@ export class SummaryPanel {
       panel = document.createElement("div");
     }
     panel.className =
-      "flex h-20 shadow-md border-2 items-center justify-center border-gray-400 bg-gray-300 text-gray-700";
+      "flex h-17 shadow-md border-2 items-center justify-center border-gray-400 bg-gray-300 text-gray-700";
     panel.id = "summary-div";
     panel.innerHTML = `
 <span class="text-gray-700 font-bold pr-2">Waiting for all citation queries to be completed...</span>
@@ -25,19 +26,24 @@ export class SummaryPanel {
     this.panel = panel as HTMLDivElement;
   }
 
-  public updateSummaryDiv(cardList: CitationCardList) {
-    const foundPapers = Array.from(
-      cardList.citationMap.values().filter((entry) => entry.state == CitationState.Success),
-    ).length;
+  public updateSummaryDiv(citations: CitationEntry[]) {
+    const foundPapers = citations.filter((entry) => entry.state == CitationState.Success).length;
 
-    this.panel.classList.add("flex");
+    this.panel.classList.remove("justify-center");
+    this.panel.classList.add("justify-between");
     this.panel.innerHTML = `
-      <p class="text-left">
-        ${foundPapers === cardList.citationMap.size ? "Found all papers!" : `Found ${foundPapers} / ${cardList.citationMap.size} papers.`}
+      <p class="text-left font-bold ml-10">
+        ${foundPapers === citations.length ? "Found all papers!" : `Found ${foundPapers} / ${citations.length} papers.`}
       </p>
-`;
+    `;
 
-    new DropdownMultiSelect("summary-div");
-    new DropdownSingleSelect("summary-div");
+    const buttonContainer = document.createElement("div");
+    buttonContainer.className = "space-x-3";
+    buttonContainer.id = "button-container";
+
+    this.panel.appendChild(buttonContainer);
+
+    this.filter = new FilterDropdownMultiSelect(buttonContainer.id);
+    this.sort = new SortDropdownSingleSelect(buttonContainer.id);
   }
 }
