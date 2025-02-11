@@ -143,7 +143,6 @@ export class FilterDropdownMultiSelect {
       .filter((option) => option.checked) // Only include checked filters
       .map((option) => filterMap[option.id]); // Map filter IDs to CitationState values
 
-    console.log(activeFilters);
     // If no filters are active, return the original list
     if (activeFilters.length === 0) {
       return list;
