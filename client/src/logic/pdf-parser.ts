@@ -3,6 +3,16 @@ import type { PDFDocumentProxy, TextItem } from "pdfjs-dist/types/src/display/ap
 import "pdfjs-dist/build/pdf.worker.mjs";
 import { CitationTokenizer } from "./tokenizer";
 
+type CitationLine = {
+  tokens: CitationToken[];
+};
+
+export type CitationToken = {
+  text: string;
+  hasEOL: boolean;
+  fontId: string;
+};
+
 export class ParsedCitation {
   originalText: string;
   authors: string;
@@ -43,14 +53,17 @@ export async function ParseCitations(pdfFile: File): Promise<ParsedCitation[] | 
       return "Citations section was not found";
     }
 
-    const citationStrings = await buildCitationsText(
+    const citationLines = await buildCitationsText(
       pdf,
       startOfCitations.page,
       startOfCitations.line,
     );
+    const citations = mergeAndCleanupCitationTokens(citationLines);
 
-    return citationStrings.map(
-      (text) => new CitationTokenizer(text).tokenize() || new ParsedCitation(text, "", "", "", ""),
+    return citations.map(
+      (citation) =>
+        new CitationTokenizer(citation.tokens).tokenize() ||
+        new ParsedCitation(citation.tokens.map((t) => t.text).join(""), "", "", "", ""),
     );
   } catch (error) {
     console.error("Error parsing PDF:", error);
@@ -93,48 +106,89 @@ async function buildCitationsText(
   pdf: PDFDocumentProxy,
   pageStart: number,
   lineStart: number,
-): Promise<string[]> {
-  const result: string[] = [];
+): Promise<CitationLine[]> {
+  const result: CitationLine[] = [];
 
   var currentPage = pageStart;
   var currentLine = lineStart;
   var citationNumber = 1;
-  var citation = "";
+
+  var currentCitation: CitationToken[] = [];
 
   while (currentPage <= pdf.numPages) {
     const page = await pdf.getPage(currentPage);
     const textContent = await page.getTextContent();
 
-    const lines = textContent.items
-      .filter((item): item is TextItem => "str" in item)
-      .map((item) => item.str.trim());
+    for (let i = currentLine; i < textContent.items.length; i++) {
+      let token = textContent.items[i] as TextItem;
 
-    for (let i = currentLine; i < lines.length; i++) {
-      let line = lines[i];
-
-      // Found new citation, finish current one and add it to result list
-      if (line.startsWith(`[${citationNumber}]`)) {
-        citation = citation.replace("  ", " ").replace(/^\[\d+\]\s*/, "");
-
-        if (citation != "") {
-          result.push(citation);
+      // Found the start of a citation, finish current one and add it to result list
+      if (token.str.startsWith(`[${citationNumber}]`)) {
+        if (currentCitation.length != 0) {
+          result.push({ tokens: currentCitation });
+          currentCitation = [];
         }
-        citation = line;
+
         citationNumber++;
-        continue;
       }
 
-      if (citation.endsWith("-")) {
-        citation = citation.slice(0, -1);
-        citation += line;
-      } else {
-        citation += " " + line;
-      }
+      currentCitation.push({
+        text: token.str,
+        hasEOL: token.hasEOL,
+        fontId: token.fontName,
+      });
     }
 
     currentLine = 0;
     currentPage++;
   }
+
+  return result;
+}
+
+// Given an array of CitationLines, performs the following operations:
+// Merges all of the tokens that belong to the same font
+// Merges new lines
+// Cleanup the start of the first token, if it starts with [\d+]
+// If token ends with ". In ", we remove this ending
+function mergeAndCleanupCitationTokens(citationLines: CitationLine[]): CitationLine[] {
+  const result: CitationLine[] = [];
+
+  for (const line of citationLines) {
+    var currentLine: CitationToken[] = [];
+    var currentTokens: CitationToken = line.tokens[0] || { text: "", hasEOL: false, fontId: "" };
+
+    for (var i = 1; i < line.tokens.length; i++) {
+      const token = line.tokens[i];
+      if (token.fontId != currentTokens.fontId) {
+        currentLine.push(currentTokens);
+        currentTokens = { text: "", hasEOL: false, fontId: token.fontId };
+      }
+
+      if (token.hasEOL) {
+        if (token.text.endsWith("-")) {
+          currentTokens.text = currentTokens.text.slice(0, -1);
+        }
+      }
+
+      currentTokens.text = currentTokens.text += token.text;
+    }
+
+    currentLine.push(currentTokens);
+    result.push({ tokens: currentLine });
+  }
+
+  // Cleanup section
+  for (const line of result) {
+    // Remove the citation number from the line
+    line.tokens[0].text = line.tokens[0].text.replace(/^\[\d+\]\s*/, "");
+    for (const token of line.tokens) {
+      // If token ends with ". In ", we remove this part of the textinput
+      token.text = token.text.replace(/\.\s*in\b\s*$/i, ".");
+    }
+  }
+
+  console.log(result);
 
   return result;
 }

@@ -1,13 +1,18 @@
 //
 
-import { ParsedCitation } from "./pdf-parser";
+import { CitationToken, ParsedCitation } from "./pdf-parser";
 
 export class CitationTokenizer {
+  private tokens: CitationToken[];
+  private currentToken: number;
+
   private input: string;
   private position: number;
 
-  constructor(input: string) {
-    this.input = input.trim();
+  constructor(tokens: CitationToken[]) {
+    this.tokens = tokens;
+    this.currentToken = 0;
+    this.input = tokens[0].text;
     this.position = 0;
   }
 
@@ -28,12 +33,18 @@ export class CitationTokenizer {
   private peekUntil(predicate: (consumedText: string, char: string) => boolean): string {
     let result = "";
     let startingPosition = this.position;
-    while (this.hasMore() && !predicate(result, this.peek(startingPosition))) {
+
+    while (
+      startingPosition < this.input.length &&
+      !predicate(result, this.peek(startingPosition))
+    ) {
       result += this.input[startingPosition++];
     }
     return result;
   }
 
+  // If we consume the last character of the current token and there are more tokens to check,
+  // We update the input position and token
   private consume(): string {
     return this.hasMore() ? this.input[this.position++] : "";
   }
@@ -46,6 +57,8 @@ export class CitationTokenizer {
     return result;
   }
 
+  // Generation assumption: If a colon is found, then the authors section is over.
+  //
   // MLA:
   //   - Conover, Mary Boudreau. Understanding electrocardiography.
   //   - Einstein, Albert. "The general theory of relativity."
@@ -77,7 +90,7 @@ export class CitationTokenizer {
   //   - L. C. Li.
   //
   private parseAuthors(): string {
-    let text = this.peekUntil((_, char) => char === "," || char === ".");
+    let text = this.peekUntil((_, char) => char === "," || char === "." || char === ":");
 
     // If there is only one character and then a full stop, then it's the unknown format.
     if (text.length === 1) {
@@ -87,17 +100,21 @@ export class CitationTokenizer {
     // Vancouver style doesn't have a comma after the first name, so it is the easiest to identify.
     // It ends when we find the first full stop.
     if (text.includes(" ")) {
-      return this.consumeUntil((_, char) => char === ".");
+      return this.consumeUntil((_, char) => char === "." || char === ":");
     }
 
     // Next, check if the second name isn't an initial.
     // Parse until two commas are found, or a full stop is found
     // If it isn't, then it's MLA or CHICAGO, while both can be parsed until a final stop is found
     text = this.peekUntil(
-      (peekedText, char) => (peekedText.includes(",") && char === ",") || char === ".",
+      (peekedText, char) =>
+        (peekedText.includes(",") && char === ",") || char === "." || char === ":",
     );
-    if (text != "" && text.split(",")[1].length === 1) {
-      return this.consumeUntil((_, char) => char === ".");
+
+    const splitText = text.split(",");
+    const textHasTwoElements = splitText.length === 2;
+    if (textHasTwoElements && splitText[1].length === 1) {
+      return this.consumeUntil((_, char) => char === "." || char === ":");
     }
 
     // APA and HARVARD are missing by this point
@@ -119,7 +136,11 @@ export class CitationTokenizer {
     const previousChar = this.input[pos - 1];
     const currentChar = this.input[pos];
 
-    return isLetter(twoPreviousChar) && isLetter(previousChar) && currentChar === ".";
+    return (
+      isLetter(twoPreviousChar) &&
+      isLetter(previousChar) &&
+      (currentChar === "." || currentChar === ":")
+    );
   }
 
   // If we find a number, then we assume that is year the year and return true.
@@ -174,39 +195,51 @@ export class CitationTokenizer {
     return incomingText;
   }
 
+  private changeTokensIfNeeded(): void {
+    if (!this.hasMore() && this.currentToken + 1 < this.tokens.length) {
+      this.currentToken++;
+      this.input = this.tokens[this.currentToken].text;
+      this.position = 0;
+    }
+  }
+
   // This tokenizer checks for:
   // Authors, year, title, conference
   // Authors, title, conference
   public tokenize(): ParsedCitation | null {
     try {
       const authors = this.parseAuthors();
-
       this.consume(); // consume the dot
+      this.changeTokensIfNeeded();
+
       // Tries to parse an year. If found, consumes it
       const year = this.tryParseYear();
-
       // Consume whitespace
       this.consumeUntil((_, char) => !/\s/.test(char));
+      this.changeTokensIfNeeded();
 
       // Parse title (ends with a period)
       const title = this.consumeUntil((_, char) => char === ".");
       this.consume(); // consume the dot
-
       // Consume whitespace
       this.consumeUntil((_, char) => !/\s/.test(char));
+      this.changeTokensIfNeeded();
 
       // Parse conference name (ends with a comma or end of string)
       const conferenceName = this.consumeUntil((_, char) => char === ",");
+
+      const originalText = this.tokens.map((t) => t.text).join(" ");
       return new ParsedCitation(
-        this.input,
+        originalText,
         authors.trim(),
         title.trim(),
         conferenceName.trim(),
         year,
       );
     } catch (error) {
-      console.log("Unexpected error!");
+      console.log("Unexpected error! ");
       console.log(error);
+      exit();
       return null;
     }
   }
