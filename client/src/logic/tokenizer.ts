@@ -239,7 +239,6 @@ export class CitationTokenizer {
     } catch (error) {
       console.log("Unexpected error! ");
       console.log(error);
-      exit();
       return null;
     }
   }

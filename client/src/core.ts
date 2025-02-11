@@ -33,6 +33,7 @@ export async function processPdfFile(file: File) {
 
   if (typeof parsedCitations === "string") {
     console.log(parsedCitations);
+    alert(parsedCitations);
     return;
   }
 
