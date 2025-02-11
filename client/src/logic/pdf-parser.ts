@@ -157,6 +157,7 @@ function mergeAndCleanupCitationTokens(citationLines: CitationLine[]): CitationL
   for (const line of citationLines) {
     var currentLine: CitationToken[] = [];
     var currentTokens: CitationToken = line.tokens[0] || { text: "", hasEOL: false, fontId: "" };
+    var appendNextLine = false;
 
     for (var i = 1; i < line.tokens.length; i++) {
       const token = line.tokens[i];
@@ -165,12 +166,17 @@ function mergeAndCleanupCitationTokens(citationLines: CitationLine[]): CitationL
         currentTokens = { text: "", hasEOL: false, fontId: token.fontId };
       }
 
-      if (token.hasEOL) {
-        if (token.text.endsWith("-")) {
-          currentTokens.text = currentTokens.text.slice(0, -1);
-        }
+      if (appendNextLine) {
+        appendNextLine = false;
+        currentTokens.text += " ";
       }
 
+      if (token.hasEOL) {
+        appendNextLine = true;
+        if (token.text.endsWith("-")) {
+          token.text = token.text.slice(0, -1);
+        }
+      }
       currentTokens.text = currentTokens.text += token.text;
     }
 
@@ -187,8 +193,6 @@ function mergeAndCleanupCitationTokens(citationLines: CitationLine[]): CitationL
       token.text = token.text.replace(/\.\s*in\b\s*$/i, ".");
     }
   }
-
-  console.log(result);
 
   return result;
 }
