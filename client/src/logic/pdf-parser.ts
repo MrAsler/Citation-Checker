@@ -81,7 +81,7 @@ async function loadPdfFile(pdfFile: File): Promise<PDFDocumentProxy> {
 async function findStartOfCitations(
   pdf: PDFDocumentProxy,
 ): Promise<{ page: number; line: number } | null> {
-  for (let pageNum = pdf.numPages; pageNum >= 0; pageNum--) {
+  for (let pageNum = pdf.numPages; pageNum >= 1; pageNum--) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
 
