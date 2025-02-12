@@ -50,7 +50,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/search", post(handle_search))
         .route("/check-health", get(health_check))
-        .nest_service("/", ServeDir::new("public"))
+        .nest_service("/public", ServeDir::new("public"))
         .with_state(state);
 
     // Run it with hyper
