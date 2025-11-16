@@ -1,14 +1,12 @@
 import { CitationEntry, CitationState } from "@/core";
 import { searchPaperByTitle } from "@/logic/api";
-import {
-  createAuthorsIcon,
-  createCalendarIcon,
-  createConferenceIcon,
-  createDarkGreyInterrogationPoint,
-  createGreenCheckmark,
-  createRedCross,
-  createTitleIcon,
-} from "@/ui-elements";
+import authors from "@/assets/authors.svg";
+import calendar from "@/assets/calendar.svg";
+import conference from "@/assets/conference.svg";
+import title from "@/assets/title.svg";
+import question_mark from "@/assets/gray-question_mark.svg";
+import green_checkmark from "@/assets/green-checkmark.svg";
+import red_cross from "@/assets/red-cross.svg";
 
 export class CitationCardList {
   private unorderedList: HTMLUListElement;
@@ -36,7 +34,9 @@ export class CitationCardList {
   private addCitation(citation: CitationEntry) {
     const year_template = `
           <div class="flex items-center border-b border-gray-300 pt-5 pb-4">
-            ${createCalendarIcon(["mr-5"]).outerHTML}
+            <div class="size-6 mr-5">
+              <img src="${calendar}"></>
+            </div>
             <p class="text-left">
               ${citation.info.year}
             </p>
@@ -54,21 +54,27 @@ export class CitationCardList {
 
         <div class="flex flex-col max-w-9/10">
           <div class="flex items-center border-b border-gray-300 pb-4" title="Author">
-            ${createAuthorsIcon(["mr-5"]).outerHTML}
+            <div class="size-6 mr-5">
+              <img src="${authors}"></>
+            </div>
             <p class="text-left">
               ${citation.info.authors}
             </p>
           </div>
 
           <div class="flex items-center border-b border-gray-300 pt-4 pb-4" title="Title"">
-            ${createTitleIcon(["mr-5"]).outerHTML}
+            <div class="size-6 mr-5">
+              <img src="${title}"></>
+            </div>
             <p class="text-left">
               ${citation.info.title}
             </p>
           </div>
 
           <div class="flex items-center border-b border-gray-300 pt-4 pb-4" title="Conference">
-            ${createConferenceIcon(["mr-5"]).outerHTML}
+            <div class="size-6 mr-5">
+              <img src="${conference}"></>
+            </div>
             <p class="text-left">
               ${citation.info.conference}
             </p>
@@ -97,19 +103,25 @@ export class CitationCardList {
       }
       case CitationState.Error: {
         return `
-          ${createRedCross().outerHTML}
+          <div class="size-8">
+            <img src="${red_cross}"/>
+          </div>
           <p class="text-justify justify-center"> ${citation.metadata || "Unknown error"} </p>
 `;
       }
       case CitationState.NotFound: {
         return `
-          ${createDarkGreyInterrogationPoint().outerHTML}
+          <div class="size-8">
+            <img src="${question_mark}"/>
+          </div>
           <p class="pl-2"> Paper not found </>
 `;
       }
       case CitationState.Success: {
         return `
-          ${createGreenCheckmark().outerHTML}
+          <div class="size-8">
+            <img src="${green_checkmark}"/>
+          </div>
           <div class="flex flex-col">
             <a class="pl-2 text-left text-xs" href="${citation.metadata!.id}" target="_blank" rel="noopener noreferrer"> 
               ${citation.metadata!.display_name} 
