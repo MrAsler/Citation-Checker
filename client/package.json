@@ -10,14 +10,16 @@
     "predeploy": "bun run build"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.3",
-    "@types/pdfjs-dist": "^2.10.377",
-    "tailwindcss": "^4.0.3",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.5",
-    "@types/bun": "latest"
+    "@tailwindcss/vite": "^4.1.17",
+    "@types/bun": "latest",
+    "@types/pdfjs-dist": "^2.10.378",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.7.1",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2"
   },
   "dependencies": {
-    "pdfjs-dist": "^4.10.38"
+    "pdfjs-dist": "^5.4.394"
   }
 }

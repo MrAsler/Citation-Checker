@@ -2,7 +2,6 @@
 node_modules
 Dockerfile*
 .dockerignore
-client/.env
 .git
 LICENSE
 fly.toml

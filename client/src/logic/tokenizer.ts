@@ -1,5 +1,3 @@
-//
-
 import { CitationToken, ParsedCitation } from "./pdf-parser";
 
 export class CitationTokenizer {

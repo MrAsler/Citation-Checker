@@ -2,12 +2,20 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::post,
     Json, Router,
 };
+use axum::routing::get;
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tower_http::services::ServeDir;
+use tower_http::cors::CorsLayer;
+
+#[derive(Clone)]
+struct AppState {
+    client: reqwest::Client,
+    openalex_base_url: Url,
+}
 
 // Request and response types
 #[derive(Deserialize)]
@@ -33,126 +41,123 @@ struct OpenAlexResponse {
     results: Vec<SearchResult>,
 }
 
-struct AppState {
-    client: reqwest::Client,
-    openalex_base_url: String,
+#[derive(Debug)]
+struct AppError {
+    status: StatusCode,
+    msg: String,
+}
+
+impl AppError {
+    fn bad_request(msg: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            msg: msg.into(),
+        }
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(e: reqwest::Error) -> Self {
+        // If upstream returned a non-2xx, preserve its status when possible.
+        if let Some(s) = e.status() {
+            return Self {
+                status: s,
+                msg: "External API error".to_string(),
+            };
+        }
+        // If JSON decoding failed, report a bad gateway (upstream response unexpected).
+        if e.is_decode() {
+            return Self {
+                status: StatusCode::BAD_GATEWAY,
+                msg: format!("Failed to parse upstream response: {}", e),
+            };
+        }
+        // Network/timeouts/etc.
+        Self {
+            status: StatusCode::BAD_GATEWAY,
+            msg: e.to_string(),
+        }
+    }
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        (self.status, Json(ErrorResponse { error: self.msg })).into_response()
+    }
 }
 
 #[tokio::main]
 async fn main() {
-    // Initialize application state
-    let state = Arc::new(AppState {
+    let state = AppState {
         client: reqwest::Client::new(),
-        openalex_base_url: "https://api.openalex.org".to_string(),
-    });
+        openalex_base_url: Url::parse("https://api.openalex.org").unwrap(),
+    };
 
-    // Create our application with routes
     let app = Router::new()
         .route("/api/search", post(handle_search))
-        .route("/check-health", get(health_check))
+        .route("/check-health", get(|| async { "Hello!" }))
         .nest_service("/public", ServeDir::new("public"))
+        .fallback(|| async { (StatusCode::NOT_FOUND, "Not Found") })
+        .layer(CorsLayer::permissive())
         .with_state(state);
 
-    // Run it with hyper
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+        .await
+        .unwrap();
 
+    println!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn health_check() -> &'static str {
-    "Hello!"
-}
+async fn handle_search(
+    State(state): State<AppState>,
+    Json(payload): Json<SearchRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let title = match payload.title {
+        Some(t) if !t.is_empty() => t,
+        _ => return Err(AppError::bad_request("Title is required")),
+    };
 
-async fn perform_search(
-    state: Arc<AppState>,
-    title: String,
-) -> Result<Vec<SearchResult>, (StatusCode, ErrorResponse)> {
-    let commaless_title = title.replace(",", "");
-    let quoted_title = format!("\"{}\"", commaless_title);
-    let search_query = "/works?filter=title.search:";
-    let url = format!(
-        "{}{}{}&select=id,display_name,publication_year,cited_by_count",
-        state.openalex_base_url, search_query, quoted_title
-    );
-    println!("{:?}", url);
+    println!("parsing to #{}", title);
 
-    // Make request to OpenAlex
-    let response = state.client.get(&url).send().await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ErrorResponse {
-                error: format!("Request failed: {}", e),
-            },
-        )
-    })?;
-
-    if !response.status().is_success() {
-        let response_status = response.status().as_u16();
-        return Err((
-            StatusCode::from_u16(response_status).unwrap(),
-            ErrorResponse {
-                error: "External API error".to_string(),
-            },
+    if title.len() >= 500 {
+        return Err(AppError::bad_request(
+            "The title's length is too big (over 500 characters)",
         ));
     }
 
-    let query_result = response.json::<OpenAlexResponse>().await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ErrorResponse {
-                error: format!("Failed to parse response: {}", e),
-            },
-        )
-    })?;
-
-    Ok(query_result.results)
-}
-
-async fn handle_search(
-    State(state): State<Arc<AppState>>,
-    Json(payload): Json<SearchRequest>,
-) -> Response {
-    // Validate title
-    let title = match payload.title {
-        Some(title) => title,
-        None => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: "Title is required".to_string(),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    if title.len() >= 500 {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "The title's length is too big (over 500 characters)".to_string(),
-            }),
-        )
-            .into_response();
-    }
-
     // First attempt with full title
-    let mut results = match perform_search(state.clone(), title.clone()).await {
-        Ok(results) => results,
-        Err((status, error)) => return (status, Json(error)).into_response(),
-    };
+    let mut results = perform_search(&state, &title).await?;
 
-    // OpenAlex has some works whose title is only the text until the paper title's colon.
-    // As such, if we didn't receive any results and the title has a colon,
-    // then get the text up to the colon and try the query again
+    // If empty and there's a colon, try text before the colon
     if results.is_empty() {
         if let Some(index) = title.find(':') {
-            let text_before_colon = title[..index].to_string();
-            match perform_search(state, text_before_colon).await {
-                Ok(new_results) => results = new_results,
-                Err((status, error)) => return (status, Json(error)).into_response(),
-            }
+            let text_before_colon = &title[..index];
+            results = perform_search(&state, text_before_colon).await?;
         }
     }
-    Json(results).into_response()
+
+    Ok(Json(results))
+}
+
+async fn perform_search(state: &AppState, title: &str) -> Result<Vec<SearchResult>, AppError> {
+    // Build URL with proper query encoding
+    let mut url = state.openalex_base_url.clone();
+    url.set_path("works");
+
+    let commaless_title = title.replace(',', "");
+    let filter = format!("title.search:\"{}\"", commaless_title);
+
+    url.query_pairs_mut()
+        .append_pair("filter", &filter)
+        .append_pair(
+            "select",
+            "id,display_name,publication_year,cited_by_count",
+        );
+
+    // Send request, convert non-2xx to errors, parse JSON
+    println!("Making a request to #{}", url);
+    let res = state.client.get(url).send().await?.error_for_status()?;
+    let body = res.json::<OpenAlexResponse>().await?; // if this fails, AppError maps it
+    Ok(body.results)
 }

@@ -1,6 +1,8 @@
-const apiUrl = import.meta.env.VITE_API_URL!;
+const { protocol, hostname } = window.location;
+const apiUrl = `${protocol}//${hostname}:3000/api/searche`;
 
 export async function searchPaperByTitle(title: string): Promise<Response> {
+
   try {
     const response = await fetch(apiUrl, {
       method: "POST",

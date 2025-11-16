@@ -53,21 +53,21 @@ export class CitationCardList {
         </span>
 
         <div class="flex flex-col max-w-9/10">
-          <div class="flex items-center border-b border-gray-300 pb-4">
+          <div class="flex items-center border-b border-gray-300 pb-4" title="Author">
             ${createAuthorsIcon(["mr-5"]).outerHTML}
             <p class="text-left">
               ${citation.info.authors}
             </p>
           </div>
 
-          <div class="flex items-center border-b border-gray-300 pt-4 pb-4">
+          <div class="flex items-center border-b border-gray-300 pt-4 pb-4" title="Title"">
             ${createTitleIcon(["mr-5"]).outerHTML}
             <p class="text-left">
               ${citation.info.title}
             </p>
           </div>
 
-          <div class="flex items-center border-b border-gray-300 pt-4 pb-4">
+          <div class="flex items-center border-b border-gray-300 pt-4 pb-4" title="Conference">
             ${createConferenceIcon(["mr-5"]).outerHTML}
             <p class="text-left">
               ${citation.info.conference}
@@ -76,7 +76,7 @@ export class CitationCardList {
         
           ${citation.info.year != null ? year_template : ""}
 
-          <span class="text-gray-500 truncate pt-4 mb-3 text-left cursor-help" title="${citation.info.originalText}"> ${citation.info.originalText} </span>
+          <span class="text-gray-500 pt-4 mb-3 text-left cursor-help" title="${citation.info.originalText}"> ${citation.info.originalText} </span>
 
           <div class="flex h-14 p-2 pr-3 min-w-40 w-fit max-w-80 items-center space-x-3 border-2 border-gray-300 bg-gray-200 shadow-md" id="citation-state-${citation.id}">
             ${this.citationEntryStateHtml(citation)}
